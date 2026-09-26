@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>121 Photo - Race Day Tracker</title>
+<style>
+:root {
+  --purple:#7B2FBE; --purple-bright:#A855F7; --cyan:#22D3EE; --cyan-bright:#06B6D4;
+  --neon-purple:#C084FC; --neon-cyan:#06B6D4;
+  --dark:#F5F3FF; --mid:#EDE9FB; --surface:#FFFFFF; --card:#F0ECFF;
+  --card2:#E8E4F6; --text:#1A0D3D; --muted:#7A6E9A;
+  --green:#16A34A; --green-dim:#15803D; --red:#DC2626; --gold:#D97706;
+  --border:rgba(168,85,247,0.2);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--dark);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:linear-gradient(135deg,#1A0540,#2D1060,#0D2060);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;}
+.loading-logo{width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#3D1580,#0A0520);border:2px solid #A855F7;box-shadow:0 0 30px rgba(168,85,247,0.7),0 0 60px rgba(168,85,247,0.3);display:flex;align-items:center;justify-content:center;flex-direction:column;margin-bottom:20px;animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 30px rgba(168,85,247,0.7),0 0 60px rgba(168,85,247,0.3);}50%{box-shadow:0 0 50px rgba(168,85,247,0.9),0 0 90px rgba(168,85,247,0.5);}}
+.loading-num{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:28px;color:#fff;line-height:1;}
+.loading-word{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:11px;color:#67E8F9;letter-spacing:3px;}
+.loading-text{color:rgba(255,255,255,0.6);font-size:13px;letter-spacing:2px;text-transform:uppercase;margin:16px 0 12px;text-align:center;}
+.loading-bar{width:200px;height:2px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden;margin-bottom:20px;}
+.loading-bar-fill{height:100%;background:linear-gradient(90deg,#A855F7,#67E8F9);border-radius:2px;animation:lb 1.5s ease-in-out infinite;}
+@keyframes lb{0%{width:0%;margin-left:0%;}50%{width:60%;margin-left:20%;}100%{width:0%;margin-left:100%;}}
+.csv-section{text-align:center;padding:0 24px;max-width:380px;}
+.csv-section p{color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:12px;line-height:1.6;}
+.csv-input{width:100%;background:rgba(255,255,255,0.1);border:1px solid rgba(168,85,247,0.4);border-radius:8px;color:#fff;font-size:12px;padding:10px 12px;margin-bottom:10px;outline:none;}
+.csv-input::placeholder{color:rgba(255,255,255,0.3);}
+.btn-load{width:100%;background:linear-gradient(135deg,#7B2FBE,#06B6D4);color:#fff;font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:13px;letter-spacing:1px;padding:10px 24px;border:none;border-radius:20px;cursor:pointer;}
+.btn-skip{background:transparent;color:rgba(255,255,255,0.4);font-size:11px;border:none;cursor:pointer;margin-top:8px;letter-spacing:1px;text-transform:uppercase;display:block;width:100%;padding:6px;}
+
+/* HEADER */
+header{background:linear-gradient(180deg,#2D1060,#4A1D96);padding:16px 20px 14px;border-bottom:1px solid rgba(168,85,247,0.4);text-align:center;position:relative;overflow:hidden;}
+header::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#A855F7,#67E8F9,#A855F7,transparent);}
+.logo-area{display:flex;align-items:center;justify-content:center;gap:14px;}
+.logo-circle{width:50px;height:50px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#2D1060,#0A0520);border:2px solid #A855F7;box-shadow:0 0 16px rgba(168,85,247,0.6);display:flex;align-items:center;justify-content:center;flex-direction:column;}
+.logo-n{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:16px;color:#fff;line-height:1;}
+.logo-w{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:7px;color:#67E8F9;letter-spacing:2px;}
+.brand-name{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:26px;letter-spacing:2px;color:#fff;line-height:1;}
+.brand-name span{color:#67E8F9;}
+.brand-sub{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-top:2px;}
+
+/* TABS */
+.tab-bar{background:var(--mid);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none;box-shadow:0 1px 4px rgba(123,47,190,0.08);}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab{flex-shrink:0;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}
+.tab.active{color:var(--purple-bright);border-bottom-color:var(--purple-bright);}
+.tab:hover{color:var(--text);}
+
+/* PAGES */
+.page{display:none;position:relative;z-index:1;}
+.page.active{display:block;}
+
+/* SHARED */
+.main{padding:16px;max-width:960px;margin:0 auto;}
+.section-title{font-family:Arial Black,Arial,sans-serif;font-size:10px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:22px;padding-bottom:6px;border-bottom:1px solid var(--border);position:relative;}
+.section-title::after{content:"";position:absolute;bottom:-1px;left:0;width:50px;height:1px;background:linear-gradient(90deg,var(--purple-bright),transparent);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 6px rgba(123,47,190,0.06);}
+.btn{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:8px 16px;border:none;border-radius:20px;cursor:pointer;transition:all 0.2s;}
+.btn-primary{background:linear-gradient(135deg,var(--purple),var(--neon-cyan));color:#fff;box-shadow:0 0 14px rgba(168,85,247,0.3);}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--purple-bright);color:var(--purple-bright);}
+.btn-sm{font-size:10px;padding:5px 12px;}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(220,38,38,0.3);font-size:10px;padding:4px 10px;}
+input,select,textarea{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 12px;outline:none;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--purple-bright);}
+label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;}
+.form-row{margin-bottom:12px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:10px;text-transform:uppercase;}
+.badge-paid{background:rgba(22,163,74,0.1);color:var(--green);border:1px solid rgba(22,163,74,0.3);}
+.badge-unpaid{background:rgba(220,38,38,0.08);color:var(--red);border:1px solid rgba(220,38,38,0.2);}
+.badge-comped{background:rgba(168,85,247,0.12);color:var(--purple-bright);border:1px solid rgba(168,85,247,0.3);}
+
+/* TRACKER */
+.tracker-bar{background:var(--mid);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.tracker-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.current-display{display:flex;gap:8px;align-items:center;flex:1;}
+.badge-race{background:linear-gradient(135deg,#7B2FBE,#4F1D96);color:#fff;font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:13px;padding:5px 14px;border-radius:20px;letter-spacing:1px;box-shadow:0 0 10px rgba(168,85,247,0.4);}
+.badge-moto{background:linear-gradient(135deg,#06B6D4,#0E7490);color:#fff;font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:13px;padding:5px 14px;border-radius:20px;letter-spacing:1px;box-shadow:0 0 10px rgba(6,182,212,0.4);}
+.btn-prev{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+.btn-prev:hover{background:var(--card);color:var(--text);}
+.btn-next{background:linear-gradient(135deg,var(--purple),var(--neon-cyan));color:#fff;}
+.btn-reset{background:transparent;color:var(--muted);border:1px solid rgba(168,85,247,0.15);font-size:10px;}
+
+.queue-strip{background:var(--card2);padding:8px 16px;display:flex;gap:5px;overflow-x:auto;border-bottom:1px solid var(--border);scrollbar-width:none;}
+.queue-strip::-webkit-scrollbar{display:none;}
+.queue-item{font-family:Arial Black,Arial,sans-serif;font-size:10px;font-weight:900;padding:3px 8px;border-radius:10px;white-space:nowrap;cursor:pointer;border:1px solid transparent;letter-spacing:0.5px;}
+.queue-item.done{background:rgba(123,47,190,0.06);color:rgba(122,110,154,0.5);}
+.queue-item.active{background:linear-gradient(135deg,var(--purple),var(--neon-cyan));color:#fff;box-shadow:0 0 8px rgba(168,85,247,0.4);}
+.queue-item.upcoming{background:var(--surface);color:var(--muted);border-color:var(--border);}
+.queue-item.upcoming:hover{border-color:var(--purple-bright);color:var(--purple-bright);}
+.queue-divider{width:2px;background:linear-gradient(180deg,var(--purple-bright),var(--cyan-bright));border-radius:2px;align-self:stretch;flex-shrink:0;margin:0 4px;opacity:0.5;}
+
+.active-race-card{background:linear-gradient(135deg,rgba(123,47,190,0.06) 0%,#fff 60%);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 16px rgba(123,47,190,0.08);position:relative;overflow:hidden;}
+.active-race-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--purple-bright),var(--cyan-bright),transparent);}
+.active-race-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
+.race-num-big{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:52px;line-height:1;min-width:60px;background:linear-gradient(135deg,var(--purple-bright),var(--cyan-bright));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.race-info-col{flex:1;}
+.race-classes-now{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:17px;color:var(--text);line-height:1.25;margin-bottom:4px;}
+.moto-indicator{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--cyan-bright);}
+.highlight-label{font-family:Arial Black,Arial,sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--purple-bright);margin-bottom:8px;}
+.shooters-now{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.shooter-chip{background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(6,182,212,0.05));border:1px solid rgba(168,85,247,0.4);border-radius:10px;padding:8px 12px;cursor:pointer;transition:all 0.2s;}
+.shooter-chip.shot{border-color:var(--green);background:rgba(22,163,74,0.06);}
+.chip-num{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:17px;background:linear-gradient(135deg,var(--purple-bright),var(--cyan-bright));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+.shooter-chip.shot .chip-num{background:none;-webkit-text-fill-color:var(--green);}
+.chip-name{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:14px;color:var(--text);margin-top:1px;}
+.chip-class{font-size:10px;color:var(--muted);margin-top:2px;}
+.chip-shot-label{font-size:9px;color:var(--green);letter-spacing:1px;text-transform:uppercase;margin-top:2px;font-weight:700;}
+.chip-note{font-size:10px;color:var(--gold);margin-top:2px;font-style:italic;}
+.no-shooters{color:var(--muted);font-size:13px;font-style:italic;padding:4px 0;}
+.field-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.field-grid{display:flex;flex-wrap:wrap;gap:5px;}
+.field-chip{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text);}
+.field-chip.tracked{border-color:rgba(168,85,247,0.5);background:rgba(168,85,247,0.08);}
+.field-chip .fnum{font-weight:700;margin-right:4px;color:var(--cyan-bright);}
+.field-chip .fname{color:var(--muted);}
+.field-chip.tracked .fname{color:var(--text);font-weight:600;}
+.class-sub{width:100%;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan-bright);margin-top:8px;margin-bottom:3px;}
+.next-race-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:7px;cursor:pointer;transition:all 0.2s;box-shadow:0 1px 4px rgba(123,47,190,0.04);}
+.next-race-card:hover{border-color:rgba(168,85,247,0.4);box-shadow:0 2px 10px rgba(168,85,247,0.08);}
+.next-race-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.next-num{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:24px;color:rgba(168,85,247,0.35);min-width:34px;}
+.next-classes{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:13px;color:var(--text);flex:1;line-height:1.2;}
+.next-moto{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.next-shooters{display:flex;flex-wrap:wrap;gap:5px;}
+.next-chip{background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:6px;padding:3px 8px;font-size:12px;color:var(--text);}
+.next-chip span{color:var(--cyan-bright);margin-right:3px;font-weight:700;}
+
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;box-shadow:0 1px 4px rgba(123,47,190,0.04);}
+.stat-num{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:28px;background:linear-gradient(135deg,var(--purple-bright),var(--cyan-bright));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stat-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+
+/* ROWS */
+.racer-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:7px;box-shadow:0 1px 4px rgba(123,47,190,0.04);}
+.racer-row-num{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:20px;color:var(--purple-bright);min-width:44px;}
+.racer-row-info{flex:1;}
+.racer-row-name{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:14px;color:var(--text);}
+.racer-row-classes{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* PAYMENT */
+.revenue-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;box-shadow:0 1px 6px rgba(123,47,190,0.06);}
+.revenue-total{font-family:Arial Black,Arial,sans-serif;font-size:36px;font-weight:900;background:linear-gradient(135deg,var(--green),var(--cyan-bright));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.revenue-sub{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:2px;}
+.revenue-breakdown{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;}
+.rev-item{font-size:12px;color:var(--text);}
+.rev-item b{font-weight:700;}
+.pay-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:7px;box-shadow:0 1px 4px rgba(123,47,190,0.04);}
+.pay-num{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:18px;color:var(--cyan-bright);min-width:42px;}
+.pay-name{flex:1;}
+.pay-btn{font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:9px;letter-spacing:1px;padding:5px 10px;border:1px solid;border-radius:12px;cursor:pointer;background:transparent;transition:all 0.15s;}
+.pay-btn.paid-on{background:var(--green-dim);color:#fff;border-color:var(--green);}
+.pay-btn.paid-off{color:var(--muted);border-color:var(--border);}
+.pay-btn.comp-on{background:rgba(168,85,247,0.3);color:var(--purple-bright);border-color:var(--purple-bright);}
+.pay-btn.comp-off{color:var(--muted);border-color:var(--border);}
+
+/* DELIVERY */
+.delivery-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:7px;box-shadow:0 1px 4px rgba(123,47,190,0.04);}
+.check-circle{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
+.check-circle.done{background:var(--green);border-color:var(--green);}
+.check-tick{display:none;}
+.check-circle.done .check-tick{display:block;}
+.export-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;margin-bottom:10px;line-height:1.6;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-box{background:var(--surface);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:20px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(123,47,190,0.2);}
+.modal-title{font-family:Arial Black,Arial,sans-serif;font-size:14px;color:var(--text);margin-bottom:12px;}
+.modal-actions{display:flex;gap:8px;margin-top:12px;}
+
+footer{text-align:center;padding:24px 20px;color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">
+    <div class="loading-num">121</div>
+    <div class="loading-word">PHOTO</div>
+  </div>
+  <div class="loading-text" id="loadingText">Race Day Tracker</div>
+  <div class="loading-bar"><div class="loading-bar-fill" id="loadBar"></div></div>
+  <div class="csv-section" id="csvSection" style="display:none">
+    <p>Paste your Google Sheet CSV link to auto-load signups, or skip to use the built-in list.</p>
+    <input class="csv-input" id="csvUrlInput" type="text" placeholder="Google Sheet publish URL..." />
+    <button class="btn-load" onclick="doLoadCSV()">Load Signups</button>
+    <button class="btn-skip" onclick="useBuiltIn()">Skip - Use Built-In List</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-area">
+    <div class="logo-circle"><div class="logo-n">121</div><div class="logo-w">PHOTO</div></div>
+    <div>
+      <div class="brand-name">121 <span>PHOTO</span></div>
+      <div class="brand-sub" id="eventSubtitle">Race Day Tracker</div>
+    </div>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <div class="tab active" onclick="showTab('tracker')">Race Tracker</div>
+  <div class="tab" onclick="showTab('form')">Sign Up Form</div>
+  <div class="tab" onclick="showTab('signups')">Signups</div>
+  <div class="tab" onclick="showTab('payment')">Payment</div>
+  <div class="tab" onclick="showTab('delivery')">Delivery</div>
+  <div class="tab" onclick="showTab('setup')">Event Setup</div>
+</div>
+
+<!-- TAB: RACE TRACKER -->
+<div id="tab-tracker" class="page active">
+  <div class="tracker-bar">
+    <div class="tracker-label">Now:</div>
+    <div class="current-display">
+      <div class="badge-race" id="raceLabel">RACE 1</div>
+      <div class="badge-moto" id="motoLabel">MOTO 1</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-prev btn-sm" onclick="prevRace()">Back</button>
+      <button class="btn btn-next btn-sm" onclick="nextRace()">Next</button>
+      <button class="btn btn-reset btn-sm" onclick="resetRace()">Reset</button>
+    </div>
+  </div>
+  <div class="queue-strip" id="queueStrip"></div>
+  <div class="main">
+    <div class="active-race-card">
+      <div class="active-race-header">
+        <div class="race-num-big" id="bigRaceNum">1</div>
+        <div class="race-info-col">
+          <div class="race-classes-now" id="activeClasses"></div>
+          <div class="moto-indicator" id="activeMoto">MOTO 1 OF 2</div>
+        </div>
+      </div>
+      <div class="highlight-label">Shoot These - Tap to Mark Shot</div>
+      <div class="shooters-now" id="activeShooters"></div>
+      <div class="field-label">Full Field</div>
+      <div class="field-grid" id="activeField"></div>
+    </div>
+    <div class="section-title">Coming Up</div>
+    <div id="nextRaces"></div>
+  </div>
+</div>
+
+<!-- TAB: FORM -->
+<div id="tab-form" class="page">
+  <div class="main">
+    <div class="card" style="margin-bottom:12px">
+      <div class="section-title" style="margin-top:0">Signup Form</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Share this tab with racers so they can sign up directly. You can also update the form URL in Event Setup.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="openFormExternal()">Open in Browser</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyFormLink()">Copy Link</button>
+      </div>
+    </div>
+    <div id="formContainer" style="border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#fff;min-height:600px">
+      <iframe id="formIframe"
+        src="https://docs.google.com/forms/d/e/1FAIpQLSdjEDhZlYQxKmmHTG2AqMk6yEy3WGo-okCGw7GhsE2Vbrx3Eg/viewform?embedded=true"
+        width="100%" height="700" frameborder="0" marginheight="0" marginwidth="0"
+        style="display:block">
+        Loading form...
+      </iframe>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: SIGNUPS -->
+<div id="tab-signups" class="page">
+  <div class="main">
+    <div class="stat-grid" id="signupStats"></div>
+    <div class="section-title">Signed Up Racers</div>
+    <div id="signupList"></div>
+  </div>
+</div>
+
+<!-- TAB: PAYMENT -->
+<div id="tab-payment" class="page">
+  <div class="main">
+    <div class="revenue-bar" id="revenueBar"></div>
+    <div class="section-title">Payment Status - One Entry Per Racer</div>
+    <div id="paymentList"></div>
+  </div>
+</div>
+
+<!-- TAB: DELIVERY -->
+<div id="tab-delivery" class="page">
+  <div class="main">
+    <div class="stat-grid" id="deliveryStats"></div>
+    <div class="section-title">Delivery Checklist - One Entry Per Racer</div>
+    <div id="deliveryList"></div>
+    <div class="section-title">Export List</div>
+    <div class="export-box" id="exportBox"></div>
+    <button class="btn btn-ghost btn-sm" onclick="copyExport()">Copy to Clipboard</button>
+  </div>
+</div>
+
+<!-- TAB: EVENT SETUP -->
+<div id="tab-setup" class="page">
+  <div class="main">
+    <div class="card">
+      <div class="section-title" style="margin-top:0">Event Info</div>
+      <div class="form-row"><label>Event Name</label><input id="setupEventName" type="text" placeholder="e.g. Round 5 - Blue Water Casino" /></div>
+      <div class="form-row"><label>Location</label><input id="setupLocation" type="text" placeholder="e.g. Parker, AZ" /></div>
+      <div class="form-row"><label>Price Per Racer ($)</label><input id="setupPrice" type="number" value="75" /></div>
+      <button class="btn btn-primary btn-sm" onclick="saveEventInfo()">Save Event Info</button>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0">Reload Signups from Google Sheet</div>
+      <div class="form-row"><label>Published CSV URL</label><input id="setupCsvUrl" type="text" placeholder="https://docs.google.com/spreadsheets/..." /></div>
+      <button class="btn btn-primary btn-sm" onclick="reloadCSV()">Reload Signups</button>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0">Import Race Schedule - Pit Board</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Import the race order and full entry list from the pit board. Upload a photo or paste the text.</p>
+
+      <!-- Photo upload -->
+      <div style="margin-bottom:14px">
+        <label>Option 1 - Photo of Pit Board</label>
+        <div id="photoDropZone" style="border:2px dashed rgba(168,85,247,0.3);border-radius:10px;padding:20px;text-align:center;margin-top:6px;cursor:pointer;transition:all 0.2s" onclick="document.getElementById('pitPhotoInput').click()">
+          <div style="font-size:28px;margin-bottom:6px">📷</div>
+          <div style="font-size:13px;font-weight:700;color:var(--purple-bright)">Tap to upload photo</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Photo of the pit board sheet</div>
+        </div>
+        <input type="file" id="pitPhotoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(this)" />
+        <div id="photoPreview" style="display:none;margin-top:10px">
+          <img id="photoThumb" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)" />
+          <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px" onclick="parsePhotoSchedule()">Read Schedule from Photo</button>
+        </div>
+      </div>
+
+      <!-- Text paste -->
+      <div style="margin-bottom:14px">
+        <label>Option 2 - Paste Race List as Text</label>
+        <p style="font-size:11px;color:var(--muted);margin:4px 0 8px">Type or paste in this format — each race on its own line, classes indented or on next lines:</p>
+        <div style="background:var(--card);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:8px;line-height:1.6">
+          Race 1: Ski Mod 1500<br>
+          Race 2: Junior Ski 10-12 (4-S-L)<br>
+          Race 3: Vintage X2 Open, Sport Spec<br>
+          Race 4: Ski Pro-Am Lites, Ski Novice Lites
+        </div>
+        <textarea id="scheduleTextInput" rows="10" placeholder="Paste race schedule here..." style="font-family:monospace;font-size:12px"></textarea>
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px" onclick="parseTextSchedule()">Import Text Schedule</button>
+      </div>
+
+      <!-- Status -->
+      <div id="importStatus" style="display:none;padding:10px;border-radius:8px;font-size:13px;font-weight:700;text-align:center;margin-top:8px"></div>
+
+      <!-- Preview -->
+      <div id="schedulePreview" style="display:none;margin-top:14px">
+        <div class="section-title" style="margin-top:0">Schedule Preview</div>
+        <div id="schedulePreviewList" style="font-size:12px;color:var(--text);line-height:1.8"></div>
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:10px" onclick="applyImportedSchedule()">Apply This Schedule</button>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px" onclick="cancelImport()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTE MODAL -->
+<div class="modal-overlay" id="noteModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title" id="noteModalTitle">Add Note</div>
+    <div class="form-row">
+      <label>Note for this racer</label>
+      <textarea id="noteInput" rows="3" placeholder="e.g. Great jump shot moto 1, retry moto 2..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" onclick="saveNote()">Save</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<footer>121 Photo - Race Day Tracker</footer>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+var eventInfo = { name: "Round 9 - Lake Havasu AZ Finale", location: "Lake Havasu, AZ", price: 75 };
+var currentStep = 0;
+var MOTOS = 2;
+var shotLog = {};
+var noteTarget = null;
+var signups = [];
+
+var BUILTIN = [
+  { name:"Kendra Kennedy",    num:"48",  classes:["Ski Womens Lites","Ski Novice Lites"],                                    payment:"cash",  email:"",                            paid:false, comped:false, delivered:false, note:"" },
+  { name:"Kaylee Kennedy",    num:"31",  classes:["Ski Novice Lites","Ski Womens Lites"],                                    payment:"cash",  email:"Kayleek62209@yahoo.com",      paid:false, comped:false, delivered:false, note:"" },
+  { name:"Lincoln Schuyler",  num:"297", classes:["Junior Ski 10-12 Lites","Junior Ski Four Stroke 10-12"],                  payment:"venmo", email:"Robert@bobbysky.com",         paid:false, comped:false, delivered:false, note:"" },
+  { name:"Travis Billings",   num:"7",   classes:["Junior Ski 10-12 Lites","Junior Ski Four Stroke 10-12"],                  payment:"zelle", email:"Rjrbillings@yahoo.com",       paid:false, comped:false, delivered:false, note:"" },
+  { name:"Kyla Keech",        num:"710", classes:["Ski Amateur Four Stroke Ski Lites"],                                      payment:"cash",  email:"Offroadingky@gmail.com",      paid:false, comped:false, delivered:false, note:"" },
+  { name:"Axl Jaracz",        num:"322", classes:["Ski Mod 1100","Ski Novice Lites"],                                        payment:"zelle", email:"Cameltowing.ads@gmail.com",   paid:false, comped:false, delivered:false, note:"" },
+  { name:"Ryder Bliss",       num:"492", classes:["Sport Spec","Ski Mod 1100"],                                              payment:"venmo", email:"njbliss@gmail.com",           paid:false, comped:false, delivered:false, note:"" },
+  { name:"Tony Parker",       num:"23",  classes:["Sport Spec"],                                                             payment:"venmo", email:"23jetski@gmail.com",          paid:false, comped:false, delivered:false, note:"" },
+  { name:"RJ Killian",        num:"144", classes:["Vintage X2 650 Limited"],                                                 payment:"cash",  email:"Kayley.burns00@yahoo.com",    paid:false, comped:false, delivered:false, note:"" },
+  { name:"Jackson Lynch",     num:"772", classes:["Junior Ski 10-12 Lites","Junior Ski Four Stroke 10-12"],                  payment:"venmo", email:"Scrawford813@yahoo.com",      paid:false, comped:false, delivered:false, note:"" },
+  { name:"Charles Guinchard", num:"24",  classes:["Ski Vet GP"],                                                             payment:"venmo", email:"guinchard@gmail.com",         paid:false, comped:false, delivered:false, note:"" },
+  { name:"Luke Mansfield",    num:"224", classes:["Ski Novice Lites","Ski Novice Stock 1500"],                               payment:"venmo", email:"lukecole144@icloud.com",      paid:false, comped:false, delivered:false, note:"" },
+  { name:"Cash McClure",      num:"33",  classes:["Junior Ski 10-12 Lites","Junior Ski Four Stroke 10-12","Junior Sport Spec"], payment:"venmo", email:"Ajmcclure04@gmail.com",   paid:false, comped:false, delivered:false, note:"" },
+  { name:"Thomas Boucher",    num:"3",   classes:["Ski Expert GP"],                                                          payment:"cash",  email:"",                            paid:false, comped:false, delivered:false, note:"" },
+  { name:"Shainie Seidenberg",num:"24",  classes:["Ski Women's Stock 1500","Womens Mod 1500"],                               payment:"venmo", email:"blaine_side@yahoo.com",       paid:false, comped:false, delivered:false, note:"" },
+  { name:"Shelby Warman",     num:"98",  classes:["Ski Women's Stock 1500","Ski Pro Am Stock 1500"],                         payment:"zelle", email:"Shelbywarman6701@gmail.com",  paid:false, comped:false, delivered:false, note:"" },
+  { name:"Eric Medlin",       num:"98",  classes:["Pro Am Ski GP","Ski Expert GP"],                                          payment:"zelle", email:"",                            paid:false, comped:false, delivered:false, note:"" },
+  { name:"Luciano Senestrari",num:"43",  classes:["Pro Am Ski GP"],                                                          payment:"cash",  email:"Senestrari43@gmail.com",      paid:false, comped:false, delivered:false, note:"" },
+  { name:"Hugo Pastorello",   num:"88",  classes:["Pro Am Ski GP"],                                                          payment:"cash",  email:"",                            paid:false, comped:false, delivered:false, note:"" },
+  { name:"Landen Ayres",      num:"167", classes:["Sport Spec"],                                                             payment:"zelle", email:"Landen.ayres2009@icloud.com", paid:false, comped:false, delivered:false, note:"" },
+  { name:"Bobby Cardone",     num:"239", classes:["Sport Spec","Pro Am Runabout Stock"],                                     payment:"zelle", email:"636cardone@gmail.com",        paid:false, comped:false, delivered:false, note:"" },
+  { name:"Brandon Curtis",    num:"7",   classes:["Sport Spec"],                                                             payment:"zelle", email:"Curtisbrandonjr@gmail.com",   paid:false, comped:false, delivered:false, note:"" },
+  { name:"Jason Osicka",      num:"953", classes:["Novice Sport Spec"],                                                      payment:"zelle", email:"Osicazrt@gmail.com",          paid:false, comped:false, delivered:false, note:"" },
+  { name:"Chase Lynch",       num:"731", classes:["Junior Ski 10-12 Lites","Junior Ski Four Stroke 10-12"],                  payment:"zelle", email:"",                            paid:false, comped:false, delivered:false, note:"" }
+];
+
+
+
+var schedule = [
+  { num:1,  classes:[
+    { name:"Ski Vet GP", racers:[
+      {num:"24",name:"Charles Guinchard"},{num:"440",name:"Alex Zentz"},{num:"11",name:"Clint Toth"},
+      {num:"29",name:"Martie Wells"},{num:"13",name:"Todd Haig"},{num:"55",name:"Alejandro Playan"},
+      {num:"17",name:"Alain Wyss"},{num:"51",name:"David Cabrera"},{num:"539",name:"Matt Oppen"},
+      {num:"521",name:"Nick Giles"}
+    ]}
+  ]},
+  { num:2,  classes:[
+    { name:"Junior Ski 10-12 Lites", racers:[
+      {num:"7",name:"Travis Billings"},{num:"731",name:"Chase Lynch"},{num:"297",name:"Lincoln Schuyler"},
+      {num:"708",name:"Brody Zipperian"},{num:"772",name:"Jackson Lynch"},{num:"137",name:"Crue Reeder"},
+      {num:"33",name:"Cash McClure"},{num:"124",name:"Payton Benson"}
+    ]}
+  ]},
+  { num:3,  classes:[
+    { name:"Ski Mod 1100", racers:[
+      {num:"492",name:"Ryder Bliss"},{num:"12",name:"Tanner Haig"},{num:"279",name:"Erik Gruenwald"},
+      {num:"322",name:"Axl Jaracz"},{num:"145",name:"Deegan Newton"}
+    ]},
+    { name:"Womens Mod 1500", racers:[
+      {num:"515",name:"Taylor Smith"},{num:"24",name:"Shainie Seidenberg"},
+      {num:"169",name:"Isabella Parker"},{num:"11",name:"Sophia Benson"}
+    ]}
+  ]},
+  { num:4,  classes:[
+    { name:"Ski Novice Stock 1500", racers:[
+      {num:"810",name:"Ray Burgess"},{num:"714",name:"Christopher Lanahan"},{num:"195",name:"Jordan Burroughs"},
+      {num:"54",name:"Thomas Lambert"},{num:"144",name:"Luke Mansfield"},{num:"970",name:"Kaden Roenfeldt"},
+      {num:"57",name:"Lukas Glanninger"},{num:"515",name:"Ty Smith"},{num:"75",name:"Roman Letellier"},
+      {num:"36",name:"Ti Sport"},{num:"310",name:"Andrew Vo"},{num:"91",name:"Marc Aube"}
+    ]}
+  ]},
+  { num:5,  classes:[
+    { name:"Junior Ski 13-15 Lites", racers:[
+      {num:"319",name:"Bentley Cox"},{num:"111",name:"Parker Toth"},{num:"12",name:"Tanner Haig"},
+      {num:"17",name:"Allan Letellier"},{num:"465",name:"Tanner Welter"}
+    ]},
+    { name:"Ski Womens Lites", racers:[
+      {num:"851",name:"Britton Reinhard"},{num:"31",name:"Kaylee Kennedy"},{num:"48",name:"Kendra Kennedy"},
+      {num:"17",name:"Anabella Roman"},{num:"124",name:"Sophia Benson"}
+    ]}
+  ]},
+  { num:6,  classes:[
+    { name:"Runabout 1100 Stock", racers:[
+      {num:"301",name:"Scott Wilson"},{num:"22",name:"Renee Hill"},{num:"311",name:"Tate Cleverly"},
+      {num:"319",name:"Shawn Cox"},{num:"7",name:"Carmen Roosmaa"},{num:"176",name:"Eduardo Lopez"}
+    ]},
+    { name:"Runabout N/A Stock", racers:[
+      {num:"94",name:"Billy Ayres Jr"}
+    ]}
+  ]},
+  { num:7,  classes:[
+    { name:"Ski Amateur Four Stroke Ski Lites", racers:[
+      {num:"515",name:"Ty Smith"},{num:"710",name:"Kyla Desrosiers"},{num:"218",name:"Dion Studinski"},
+      {num:"515T",name:"Taylor Smith"},{num:"29",name:"Keith Hakow"},{num:"297",name:"Baron Mernik"},
+      {num:"UA7",name:"Feliks Myronenko"},{num:"124",name:"Sophia Benson"},{num:"465",name:"Eric Welter"},
+      {num:"33",name:"Britton Reinhard"},{num:"160",name:"Andrew Vo"},{num:"BR1",name:"Diego Schroder"},
+      {num:"93",name:"Osman Min"},{num:"99",name:"Rafael Antonetti"}
+    ]}
+  ]},
+  { num:8,  classes:[
+    { name:"Novice Sport Spec", racers:[
+      {num:"661",name:"Natalia Giuliano"},{num:"19",name:"Erika Vogelsang"},{num:"953",name:"Jason Osicka"}
+    ]},
+    { name:"Junior Sport Spec", racers:[
+      {num:"33",name:"Cash McClure"}
+    ]}
+  ]},
+  { num:9,  classes:[
+    { name:"Pro Am Runabout Stock", racers:[
+      {num:"239",name:"Robert Cardone"},{num:"419",name:"Brian Carns"},{num:"93",name:"Michele Colasanto"},
+      {num:"193",name:"Nathan Ebanks"},{num:"176",name:"Eduardo Lopez"}
+    ]}
+  ]},
+  { num:10, classes:[
+    { name:"Pro Am Ski GP", racers:[
+      {num:"201",name:"Christopher Landis"},{num:"88",name:"Hugo Pastorello"},{num:"37",name:"Toshiyuki Ohara"},
+      {num:"51",name:"David Cabrera"},{num:"98",name:"Eric Medlin"},{num:"114",name:"Brayden Sebben"},
+      {num:"43",name:"Luciano Senestrari"},{num:"202",name:"Kole Cramer"},{num:"888",name:"Ryder Wildeboer"},
+      {num:"115",name:"Harley Ritchie"},{num:"88",name:"Jake Pearce"},{num:"116",name:"Deven Farthing"},
+      {num:"4",name:"Kevin Reiterer"}
+    ]}
+  ]},
+  { num:11, classes:[
+    { name:"Junior Ski Four Stroke 10-12", racers:[
+      {num:"731",name:"Chase Lynch"},{num:"297",name:"Lincoln Schuyler"},{num:"45",name:"Koltyn Gruenwald"},
+      {num:"407",name:"Brigitte Baumkirchner"},{num:"7",name:"Travis Billings"},{num:"413",name:"Beauden Baumkirchner"},
+      {num:"772",name:"Jackson Lynch"},{num:"33",name:"Cash McClure"},{num:"710",name:"Brody Zipperian"}
+    ]},
+    { name:"Junior Ski Four Stroke 13-15", racers:[
+      {num:"319",name:"Bentley Cox"},{num:"465",name:"Tanner Welter"},{num:"UA7",name:"Feliks Myronenko"},
+      {num:"87",name:"Mark Queen"}
+    ]}
+  ]},
+  { num:12, classes:[
+    { name:"Ski Pro Am Stock 1500", racers:[
+      {num:"310",name:"Sugar Sato"},{num:"125",name:"Josh Simon"},{num:"98",name:"Shelby Warman"},
+      {num:"159",name:"Preston Lewis"},{num:"777",name:"Anna Glennon"},{num:"116",name:"Heber Blackmore"}
+    ]},
+    { name:"Ski Vet Stock", racers:[
+      {num:"17",name:"Alain Wyss"},{num:"97",name:"Matthew Gibbens"},{num:"195",name:"Jordan Burroughs"},
+      {num:"812",name:"Matt Monson"}
+    ]}
+  ]},
+  { num:13, classes:[
+    { name:"Sport Spec", racers:[
+      {num:"2",name:"Kim Richardson"},{num:"492",name:"Ryder Bliss"},{num:"110",name:"Tory Snyder"},
+      {num:"23",name:"Tony Parker"},{num:"661",name:"Natalia Giuliano"},{num:"111",name:"Simon Belcher"},
+      {num:"630",name:"Jake Venditto"},{num:"5",name:"Deven Farthing"},{num:"55",name:"Straus Mernik"},
+      {num:"7",name:"Brandon Curtis"},{num:"27",name:"Robert Cardone"},{num:"177",name:"Landen Ayres"}
+    ]}
+  ]},
+  { num:14, classes:[
+    { name:"Ski Mod 1500", racers:[
+      {num:"713",name:"Sebastian Perry"},{num:"3",name:"Parker Toth"},{num:"319",name:"Bentley Cox"},
+      {num:"15",name:"Jack Cobb"},{num:"57",name:"Lukas Glanninger"},{num:"515",name:"Ty Smith"},
+      {num:"114",name:"Baron Mernik"},{num:"201",name:"Christopher Landis"},{num:"159",name:"Jake Wilson"},
+      {num:"N/A",name:"Tanner Haig"}
+    ]}
+  ]},
+  { num:15, classes:[
+    { name:"Ski Master Stock 1500", racers:[
+      {num:"54",name:"Thomas Lambert"},{num:"512",name:"Dan Conner"},{num:"221",name:"Ronny Benfield"},
+      {num:"508",name:"David Zipperian"},{num:"54P",name:"Noah Nicholson"},{num:"20",name:"Kevin DeCarli"},
+      {num:"212",name:"Mike Klippenstein"},{num:"224",name:"Philippe Dufaud"},{num:"110",name:"Scott Campo"}
+    ]}
+  ]},
+  { num:16, classes:[
+    { name:"Vintage 650/750", racers:[
+      {num:"857",name:"Anthony Farruggia"},{num:"269",name:"Noah Major"},{num:"159",name:"Casey Stone"}
+    ]},
+    { name:"Vintage 550 Open", racers:[
+      {num:"134",name:"Brian Archambault"}
+    ]},
+    { name:"Vintage X2 Open", racers:[
+      {num:"223",name:"Louie Venditto"},{num:"411",name:"Trevor Waters"}
+    ]},
+    { name:"Vintage X2 650 Limited", racers:[
+      {num:"93",name:"Hunter Burks"},{num:"144",name:"RJ Killian"},{num:"36",name:"James Gagnon"},
+      {num:"142",name:"Jeff ONeill"},{num:"8",name:"Alec Osuna"}
+    ]}
+  ]},
+  { num:17, classes:[
+    { name:"Ski Expert GP", racers:[
+      {num:"515",name:"Sugar Sato"},{num:"3",name:"Thomas Boucher"},{num:"55",name:"Patrick Parker"},
+      {num:"114",name:"Brayden Sebben"},{num:"98",name:"Eric Medlin"},{num:"97",name:"Lachlan Gibbens"}
+    ]},
+    { name:"Ski Grand Masters GP", racers:[
+      {num:"419",name:"Greg Clark"},{num:"55",name:"Alejandro Playan"},{num:"67",name:"Rick Kantola"},
+      {num:"51",name:"Michael Williams"}
+    ]}
+  ]},
+  { num:18, classes:[
+    { name:"Ski Women's Stock 1500", racers:[
+      {num:"14",name:"MacKenzie Schexnyder"},{num:"24",name:"Shainie Seidenberg"},{num:"46",name:"Casey Stone"},
+      {num:"54",name:"Kyla Desrosiers"},{num:"98",name:"Shelby Warman"},{num:"716",name:"Ruth Roberts"},
+      {num:"777",name:"Anna Glennon"},{num:"3",name:"Eva Telenkova"},{num:"335",name:"Sadie Mir"},
+      {num:"515",name:"Taylor Smith"}
+    ]}
+  ]},
+  { num:19, classes:[
+    { name:"Ski Novice Lites", racers:[
+      {num:"111",name:"Parker Toth"},{num:"322",name:"Axl Jaracz"},{num:"857",name:"Anthony Farruggia"},
+      {num:"48",name:"Kendra Kennedy"},{num:"224",name:"Luke Mansfield"},{num:"717",name:"Devin Matthias"},
+      {num:"31",name:"Kaylee Kennedy"},{num:"17",name:"Sebastian Roman"}
+    ]},
+    { name:"Ski Pro Am Lites", racers:[
+      {num:"424",name:"Brice Chambers"}
+    ]}
+  ]},
+  { num:20, classes:[
+    { name:"Runabout Amateur Stock", racers:[
+      {num:"316",name:"Carlos Lopez Jr"},{num:"908",name:"James Munroe Jr"},{num:"333",name:"Josiah Acosta"},
+      {num:"419",name:"Brian Carns"}
+    ]},
+    { name:"Pro AM Runabout Open", racers:[
+      {num:"67",name:"Rick Kantola"},{num:"7",name:"Margus Keskula"},{num:"271",name:"John Kennedy"},
+      {num:"316R",name:"Cesar Olivares"},{num:"6",name:"Maxime Benoit"}
+    ]}
+  ]}
+];
+
+
+
+var TOTAL = schedule.length * MOTOS;
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function normalizeForMatch(s) {
+  return (s || '').toLowerCase()
+    .replace(/ski\s*/g, '')
+    .replace(/junior\s*/g, 'jr ')
+    .replace(/\bjr\s+ski\b/g, 'jr ')
+    .replace(/womens|women's/g, 'womens')
+    .replace(/amateur/g, 'am')
+    .replace(/novice/g, 'nov')
+    .replace(/stroke/g, 'stroke')
+    .replace(/four stroke|4stroke|4-stroke/g, '4stroke')
+    .replace(/two stroke|2stroke|2-stroke/g, '2stroke')
+    .replace(/stock/g, 'stock')
+    .replace(/lites/g, 'lites')
+    .replace(/gp/g, 'gp')
+    .replace(/mod(ified)?/g, 'mod')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function classesMatch(schedClass, signupClass) {
+  var a = normalizeForMatch(schedClass);
+  var b = normalizeForMatch(signupClass);
+  if (a === b) return true;
+  if (a.includes(b) || b.includes(a)) return true;
+  // Key aliases
+  var aliases = [
+    ['skivetgp','vetskigp'], ['vetgp','vetskigp'],
+    ['skiexpertgp','expertgp'], ['proamskigp','proamgp'],
+    ['jrski1012lites','jr1012lites'], ['juniorski1012lites','jr1012lites'],
+    ['jrskilites1012','jr1012lites'],
+    ['juniorskilites','jrskilites'],
+    ['4strokelites','amfour4strokelites'],
+    ['amfourstrokelites','4strokelites'],
+    ['jrfourstroke1012','jr4stroke1012'],
+    ['juniorski4stroke1012','jr4stroke1012'],
+    ['jrskifourstroke1012','jr4stroke1012'],
+    ['jrskilites','jrskilites'],
+    ['womensskilites','womenslites'],
+    ['skiwormenslites','womenslites'],
+    ['womensmod1500','mod1500'],
+    ['skinovicestk1500','novicestock1500'],
+    ['skinovicestock','novicestock1500'],
+    ['vintageX2650','vintageX2650limited'],
+    ['vintagex2','vintageX2650limited'],
+    ['proamrunabout','proamrunaboutstock'],
+    ['proamrunaboutstock','proamrunabout'],
+    ['novicesportspec','novicesportspec'],
+    ['jrsportspec','juniorsportspec'],
+    ['skiproamstock1500','proamstock1500'],
+    ['skiwomensstock1500','womensstock1500'],
+    ['skiproamlites','proamlites'],
+    ['skimod1100','mod1100'],
+    ['skimod1500','mod1500'],
+    ['skinovicelites','novlites'],
+    ['novlites','skinovicelites'],
+    ['womensskilites','womenslites'],
+    ['skimasterstock1500','masterstock'],
+    ['masterstock1500','masterstock'],
+    ['skigrandmastersgp','grandmastersgp'],
+    ['skigrandmastersgp','grandmastersgp'],
+  ];
+  for (var i = 0; i < aliases.length; i++) {
+    var x = aliases[i][0], y = aliases[i][1];
+    if ((a.includes(x) && b.includes(y)) || (a.includes(y) && b.includes(x))) return true;
+  }
+  // Token overlap — if 2+ significant tokens match
+  var aTokens = a.match(/[a-z0-9]+/g) || [];
+  var bTokens = b.match(/[a-z0-9]+/g) || [];
+  var stop = {a:1,the:1,and:1,of:1,in:1,for:1,to:1,or:1};
+  var sig = function(t) { return t.length > 2 && !stop[t]; };
+  var aS = aTokens.filter(sig);
+  var bS = bTokens.filter(sig);
+  if (aS.length === 0 || bS.length === 0) return false;
+  var matches = 0;
+  for (var j = 0; j < aS.length; j++) {
+    for (var k = 0; k < bS.length; k++) {
+      if (aS[j] === bS[k] || aS[j].includes(bS[k]) || bS[k].includes(aS[j])) matches++;
+    }
+  }
+  return matches >= Math.min(2, Math.min(aS.length, bS.length));
+}
+
+function isSignedUp(num, name) {
+  for (var i = 0; i < signups.length; i++) {
+    if (signups[i].num === num && signups[i].name === name) return true;
+  }
+  return false;
+}
+
+function isClientInRace(race) {
+  // Returns array of {name, num, cls} for each client in this race.
+  // A client matches a race class ONLY when their class name matches —
+  // number alone is NOT enough, because two clients can share the same number.
+  var hits = [];
+  for (var i = 0; i < signups.length; i++) {
+    var su = signups[i];
+    for (var ri = 0; ri < race.classes.length; ri++) {
+      var cls = race.classes[ri];
+      // Must have a class-name match between what the client signed up for
+      // and the class running in this race slot
+      var classMatch = false;
+      for (var k = 0; k < su.classes.length; k++) {
+        if (classesMatch(cls.name, su.classes[k])) { classMatch = true; break; }
+      }
+      if (!classMatch) continue;
+      // Avoid duplicates
+      var already = false;
+      for (var d = 0; d < hits.length; d++) {
+        if (hits[d].name === su.name && hits[d].cls === cls.name) { already = true; break; }
+      }
+      if (!already) hits.push({ name: su.name, num: su.num, cls: cls.name });
+    }
+  }
+  return hits;
+}
+function getSignup(num, name) {
+  for (var i = 0; i < signups.length; i++) {
+    if (signups[i].num === num && signups[i].name === name) return signups[i];
+  }
+  // Also try by name only
+  for (var i = 0; i < signups.length; i++) {
+    if (signups[i].name === name) return signups[i];
+  }
+  return null;
+}
+function getStep(step) {
+  return { race: schedule[step % schedule.length], moto: Math.floor(step / schedule.length) + 1 };
+}
+function getTrackedInRace(race) {
+  return isClientInRace(race);
+}
+function getUniqueRacers() {
+  // Key = full name only. Full names from the form are unambiguous (Kaylee Kennedy vs Kendall Kennedy).
+  // Rows with the same full name get merged into one payment/delivery entry with all their classes.
+  var seen = {};
+  var unique = [];
+  for (var i = 0; i < signups.length; i++) {
+    var su = signups[i];
+    var key = su.name.toLowerCase().trim();
+    if (!seen[key]) {
+      seen[key] = true;
+      var allClasses = su.classes.slice();
+      var allNums = [su.num];
+      for (var j = 0; j < signups.length; j++) {
+        if (j !== i && signups[j].name.toLowerCase().trim() === key) {
+          for (var k = 0; k < signups[j].classes.length; k++) {
+            if (allClasses.indexOf(signups[j].classes[k]) === -1) allClasses.push(signups[j].classes[k]);
+          }
+          if (allNums.indexOf(signups[j].num) === -1) allNums.push(signups[j].num);
+        }
+      }
+      unique.push({ name: su.name, nums: allNums, num: su.num, classes: allClasses,
+                    payment: su.payment, email: su.email, paid: su.paid, comped: su.comped,
+                    delivered: su.delivered, note: su.note, key: key });
+    }
+  }
+  return unique;
+}
+function syncByKey(key, field, value) {
+  for (var i = 0; i < signups.length; i++) {
+    if (signups[i].name.toLowerCase().trim() === key) signups[i][field] = value;
+  }
+}
+
+function showTab(name) {
+  var pages = document.querySelectorAll('.page');
+  for (var i = 0; i < pages.length; i++) pages[i].classList.remove('active');
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  var names = ['tracker','form','signups','payment','delivery','setup'];
+  for (var i = 0; i < names.length; i++) {
+    if (names[i] === name) tabs[i].classList.add('active');
+  }
+  if (name === 'signups')  renderSignups();
+  if (name === 'payment')  renderPayment();
+  if (name === 'delivery') renderDelivery();
+  if (name === 'setup')    renderSetup();
+}
+
+// ── CSV ───────────────────────────────────────────────────────────────────────
+var CLASS_MAP = {
+  "ski mod 1500":"Ski Mod 1500","ski womens mod 1500":"Ski Womens Mod 1500",
+  "junior ski 10-12 (4-s-l)":"Junior Ski 10-12 (4-S-L)","junior ski 10-12":"Junior Ski 10-12 (4-S-L)",
+  "vintage x2 open":"Vintage X2 Open","sport spec":"Sport Spec",
+  "ski pro-am lites":"Ski Pro-Am Lites","ski womens lites":"Ski Womens Lites",
+  "ski novice lites":"Ski Novice Lites","ski am 4 stroke lites":"Ski Am 4 Stroke Lites",
+  "vintage x2 650 limited":"Vintage X2 650 Limited","x2 limited":"Vintage X2 650 Limited",
+  "ski mod 1100":"Ski Mod 1100","runabout 1100 stock":"Runabout 1100 Stock",
+  "runabout n/a stock":"Runabout N/A Stock","vintage 550 limited":"Vintage 550 Limited",
+  "vintage 650/750":"Vintage 650/750","ski expert gp":"Ski Expert GP",
+  "ski expert vet gp":"Ski Expert Vet GP","junior ski 10-12 lites":"Junior Ski 10-12 Lites",
+  "junior ski 13-15 lites":"Junior Ski 13-15 Lites","runabout gp/open":"Runabout GP/Open",
+  "ski novice stock 1500":"Ski Novice Stock 1500","ski womens stock 1500":"Ski Womens Stock 1500",
+  "ski master stock 1500":"Ski Master Stock 1500"
+};
+function normClass(s) { var k = (s||"").trim().toLowerCase(); return CLASS_MAP[k] || s.trim(); }
+function getF(row, keys) {
+  for (var k in row) { for (var i = 0; i < keys.length; i++) { if (k.indexOf(keys[i]) !== -1) return row[k]; } }
+  return "";
+}
+function parseCSV(text) {
+  var lines = text.split('\n'); if (lines.length < 2) return [];
+  var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/^"|"$/g,'').toLowerCase(); });
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    var cols = []; var cur = ''; var inQ = false;
+    for (var c = 0; c < lines[i].length; c++) {
+      if (lines[i][c] === '"') { inQ = !inQ; }
+      else if (lines[i][c] === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else { cur += lines[i][c]; }
+    }
+    cols.push(cur);
+    var row = {};
+    for (var j = 0; j < headers.length; j++) row[headers[j]] = (cols[j]||'').trim().replace(/^"|"$/g,'');
+    rows.push(row);
+  }
+  return rows;
+}
+function buildFromCSV(rows) {
+  var result = [];
+  rows.forEach(function(row) {
+    var name = getF(row, ['name','first']).trim();
+    var num  = getF(row, ['jetski','#','number']).trim();
+    var cls  = getF(row, ['class']).trim();
+    var pay  = getF(row, ['zelle','venmo','cash','payment']).trim().toLowerCase();
+    var email= getF(row, ['email']).trim();
+    if (!name || !num) return;
+    var fmt = name; // keep full name — unambiguous for dedup
+    var classes = cls.split(/[,\n]/).map(function(c){ return normClass(c.trim()); }).filter(Boolean);
+    if (!classes.length) classes = [cls];
+    result.push({ name:fmt, num:num, classes:classes, payment:pay, email:email, paid:false, comped:false, delivered:false, note:'' });
+  });
+  return result;
+}
+function fetchCSV(url, onDone) {
+  if (url.indexOf('output=csv') === -1 && url.indexOf('export') === -1) {
+    url = url.replace(/\/edit.*/,'').replace(/\/pub.*/,'') + '/pub?output=csv';
+  }
+  fetch(url).then(function(r){ return r.text(); })
+    .then(function(text){ var rows = parseCSV(text); onDone(rows.length > 0 ? buildFromCSV(rows) : null); })
+    .catch(function(){ onDone(null); });
+}
+function doLoadCSV() {
+  var url = document.getElementById('csvUrlInput').value.trim();
+  if (!url) return;
+  document.getElementById('loadingText').textContent = 'Loading signups...';
+  document.getElementById('csvSection').style.display = 'none';
+  fetchCSV(url, function(result) {
+    signups = result || BUILTIN.slice();
+    document.getElementById('loadingText').textContent = result ? (result.length + ' signups loaded!') : 'Could not load - using built-in list';
+    setTimeout(hideLanding, 900);
+  });
+}
+function useBuiltIn() { signups = BUILTIN.slice(); hideLanding(); }
+function hideLanding() {
+  var el = document.getElementById('loadingScreen');
+  el.style.transition = 'opacity 0.4s'; el.style.opacity = '0';
+  setTimeout(function(){ el.style.display = 'none'; render(); }, 400);
+}
+function reloadCSV() {
+  var url = document.getElementById('setupCsvUrl').value.trim();
+  if (!url) { alert('Paste a CSV URL first'); return; }
+  fetchCSV(url, function(result) {
+    if (result) { signups = result; alert(result.length + ' signups reloaded!'); render(); }
+    else { alert('Could not load CSV'); }
+  });
+}
+
+setTimeout(function(){
+  document.getElementById('loadingText').textContent = 'Load signups or use built-in list';
+  document.getElementById('loadBar').style.display = 'none';
+  document.getElementById('csvSection').style.display = 'block';
+}, 1200);
+
+// ── RACE TRACKER ──────────────────────────────────────────────────────────────
+function renderQueue() {
+  var strip = document.getElementById('queueStrip'); strip.innerHTML = '';
+  for (var m = 1; m <= MOTOS; m++) {
+    if (m > 1) { var d = document.createElement('div'); d.className = 'queue-divider'; strip.appendChild(d); }
+    for (var ri = 0; ri < schedule.length; ri++) {
+      var step = (m-1)*schedule.length + ri;
+      var item = document.createElement('div');
+      item.className = 'queue-item ' + (step < currentStep ? 'done' : step === currentStep ? 'active' : 'upcoming');
+      item.textContent = 'R' + schedule[ri].num + ' M' + m;
+      item.setAttribute('data-step', step);
+      strip.appendChild(item);
+    }
+  }
+  var active = strip.querySelector('.active');
+  if (active) active.scrollIntoView({ block:'nearest', inline:'center' });
+}
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('queue-item')) {
+    currentStep = parseInt(e.target.getAttribute('data-step')); render();
+  }
+});
+
+function renderActive() {
+  var s = getStep(currentStep); var race = s.race; var moto = s.moto;
+  var tracked = getTrackedInRace(race);
+  document.getElementById('raceLabel').textContent = 'RACE ' + race.num;
+  document.getElementById('motoLabel').textContent = 'MOTO ' + moto;
+  document.getElementById('bigRaceNum').textContent = race.num;
+  document.getElementById('activeClasses').textContent = race.classes.map(function(c){ return c.name; }).join(' / ');
+  document.getElementById('activeMoto').textContent = 'MOTO ' + moto + ' OF ' + MOTOS;
+
+  var el = document.getElementById('activeShooters'); el.innerHTML = '';
+  if (!tracked.length) {
+    var d = document.createElement('div'); d.className = 'no-shooters'; d.textContent = 'No signed-up racers in this race'; el.appendChild(d);
+  } else {
+    tracked.forEach(function(r) {
+      var key = race.num + '_' + moto + '_' + r.num + '_' + r.name;
+      var isShot = !!shotLog[key];
+      var su = getSignup(r.num, r.name);
+      var chip = document.createElement('div');
+      chip.className = 'shooter-chip' + (isShot ? ' shot' : '');
+      chip.setAttribute('data-shotkey', key);
+      chip.setAttribute('data-num', r.num);
+      chip.setAttribute('data-name', r.name);
+      var html = '<div class="chip-num">#' + r.num + '</div><div class="chip-name">' + r.name + '</div><div class="chip-class">' + r.cls + '</div>';
+      if (isShot) html += '<div class="chip-shot-label">Shot</div>';
+      if (su && su.note) html += '<div class="chip-note">' + su.note + '</div>';
+      chip.innerHTML = html;
+      el.appendChild(chip);
+    });
+  }
+
+  var fieldEl = document.getElementById('activeField'); fieldEl.innerHTML = '';
+  race.classes.forEach(function(cls) {
+    if (race.classes.length > 1) {
+      var sub = document.createElement('div'); sub.className = 'class-sub'; sub.textContent = cls.name; fieldEl.appendChild(sub);
+    }
+    cls.racers.forEach(function(r) {
+      var raceTracked = isClientInRace(race);
+      var rTracked = raceTracked.some(function(h){ return h.num === r.num && h.name === r.name; });
+      var chip = document.createElement('div');
+      chip.className = 'field-chip' + (rTracked ? ' tracked' : '');
+      chip.innerHTML = '<span class="fnum">#' + r.num + '</span><span class="fname">' + r.name + '</span>';
+      fieldEl.appendChild(chip);
+    });
+  });
+}
+
+// Shooter chip clicks via delegation
+document.addEventListener('click', function(e) {
+  var chip = e.target.closest('.shooter-chip');
+  if (!chip) return;
+  var key = chip.getAttribute('data-shotkey');
+  var num = chip.getAttribute('data-num');
+  var name = chip.getAttribute('data-name');
+  if (!key) return;
+  if (shotLog[key]) { openModal(num, name); }
+  else { shotLog[key] = true; renderActive(); }
+});
+
+function renderNext() {
+  var el = document.getElementById('nextRaces'); el.innerHTML = '';
+  for (var i = currentStep+1; i < Math.min(currentStep+6, TOTAL); i++) {
+    var s = getStep(i); var race = s.race; var moto = s.moto;
+    var tracked = getTrackedInRace(race);
+    var card = document.createElement('div'); card.className = 'next-race-card';
+    card.setAttribute('data-step', i);
+    var sh = tracked.length
+      ? tracked.map(function(r){ return '<div class="next-chip"><span>#'+r.num+'</span>'+r.name+'</div>'; }).join('')
+      : '<span style="color:var(--muted);font-size:12px">No signed-up racers</span>';
+    card.innerHTML = '<div class="next-race-header"><div class="next-num">'+race.num+'</div><div class="next-classes">'+race.classes.map(function(c){return c.name;}).join(' / ')+'</div><div class="next-moto">M'+moto+'</div></div><div class="next-shooters">'+sh+'</div>';
+    el.appendChild(card);
+  }
+}
+document.addEventListener('click', function(e) {
+  var card = e.target.closest('.next-race-card');
+  if (!card) return;
+  var step = card.getAttribute('data-step');
+  if (step !== null) { currentStep = parseInt(step); render(); }
+});
+
+function render() { renderQueue(); renderActive(); renderNext(); updateSubtitle(); }
+function nextRace() { if (currentStep < TOTAL-1) { currentStep++; render(); } }
+function prevRace() { if (currentStep > 0) { currentStep--; render(); } }
+function resetRace() { currentStep = 0; render(); }
+
+// ── NOTE MODAL ────────────────────────────────────────────────────────────────
+function openModal(num, name) {
+  noteTarget = { num: num, name: name };
+  var su = getSignup(num, name);
+  document.getElementById('noteModalTitle').textContent = 'Note for #' + num + ' ' + name;
+  document.getElementById('noteInput').value = su ? (su.note || '') : '';
+  document.getElementById('noteModal').style.display = 'flex';
+}
+function saveNote() {
+  if (noteTarget) {
+    var su = getSignup(noteTarget.num, noteTarget.name);
+    if (su) su.note = document.getElementById('noteInput').value.trim();
+  }
+  closeModal(); renderActive();
+}
+function closeModal() { document.getElementById('noteModal').style.display = 'none'; noteTarget = null; }
+
+// ── SIGNUPS TAB ───────────────────────────────────────────────────────────────
+function renderSignups() {
+  var unique = getUniqueRacers();
+  var paid = unique.filter(function(u){ return u.paid || u.comped; }).length;
+  document.getElementById('signupStats').innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + unique.length + '</div><div class="stat-label">Unique Racers</div></div>' +
+    '<div class="stat-card"><div class="stat-num">' + paid + '</div><div class="stat-label">Paid / Comped</div></div>' +
+    '<div class="stat-card"><div class="stat-num">' + (unique.length - paid) + '</div><div class="stat-label">Unpaid</div></div>';
+
+  var el = document.getElementById('signupList'); el.innerHTML = '';
+  if (!signups.length) {
+    var p = document.createElement('p'); p.style.color = 'var(--muted)'; p.style.fontSize = '13px';
+    p.textContent = 'No signups yet.'; el.appendChild(p); return;
+  }
+  unique.forEach(function(su, idx) {
+    var payBadge = su.comped ? 'badge-comped' : su.paid ? 'badge-paid' : 'badge-unpaid';
+    var payText  = su.comped ? 'Comped' : su.paid ? 'Paid' : 'Unpaid';
+    var row = document.createElement('div'); row.className = 'racer-row';
+    // Info column
+    var info = document.createElement('div'); info.className = 'racer-row-info';
+    info.innerHTML = '<div class="racer-row-name">' + su.nums.map(function(n){return '#'+n;}).join(' / ') + ' ' + su.name + '</div>' +
+      '<div class="racer-row-classes">' + su.classes.join(', ') + '</div>' +
+      '<div style="margin-top:4px"><span class="badge ' + payBadge + '">' + payText + '</span>' +
+      (su.payment ? ' <span class="badge" style="background:rgba(217,119,6,0.1);color:var(--gold);border:1px solid rgba(217,119,6,0.3)">' + su.payment + '</span>' : '') + '</div>';
+    // Remove button — use data-idx, handled by delegation
+    var btn = document.createElement('button'); btn.className = 'btn btn-danger';
+    btn.textContent = 'Remove'; btn.setAttribute('data-remove-idx', idx);
+    row.appendChild(info); row.appendChild(btn);
+    el.appendChild(row);
+  });
+}
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-remove-idx]');
+  if (!btn) return;
+  var idx = parseInt(btn.getAttribute('data-remove-idx'));
+  var unique = getUniqueRacers();
+  if (idx >= unique.length) return;
+  var su = unique[idx];
+  if (!confirm('Remove ' + su.name + ' from signups?')) return;
+  signups = signups.filter(function(s){ return s.name.toLowerCase().trim() !== su.key; });
+  renderSignups();
+});
+
+// ── PAYMENT TAB ───────────────────────────────────────────────────────────────
+function renderPayment() {
+  var price = eventInfo.price || 75;
+  var unique = getUniqueRacers();
+  var paying = unique.filter(function(u){ return !u.comped; });
+  var paid   = unique.filter(function(u){ return u.paid && !u.comped; });
+  var comped = unique.filter(function(u){ return u.comped; });
+  var unpaid = unique.filter(function(u){ return !u.paid && !u.comped; });
+  var byMethod = {};
+  paying.forEach(function(u){ var m = u.payment || 'unknown'; byMethod[m] = (byMethod[m]||0)+1; });
+  var breakdown = Object.keys(byMethod).map(function(m){ return '<div class="rev-item"><b>' + byMethod[m] + '</b> ' + m + '</div>'; }).join('');
+
+  document.getElementById('revenueBar').innerHTML =
+    '<div class="revenue-total">$' + (paid.length * price) + '</div>' +
+    '<div class="revenue-sub">Collected of $' + (paying.length * price) + ' expected &bull; ' + unique.length + ' unique racers</div>' +
+    '<div class="revenue-breakdown">' + breakdown +
+    '<div class="rev-item" style="color:var(--red)"><b>$' + (unpaid.length * price) + '</b> outstanding</div>' +
+    '<div class="rev-item" style="color:var(--purple-bright)"><b>' + comped.length + '</b> comped</div></div>';
+
+  var el = document.getElementById('paymentList'); el.innerHTML = '';
+  unique.forEach(function(su, idx) {
+    var payBadge = su.comped ? 'badge-comped' : su.paid ? 'badge-paid' : 'badge-unpaid';
+    var payText  = su.comped ? 'Comped' : su.paid ? 'Paid' : 'Unpaid';
+    var row = document.createElement('div'); row.className = 'pay-row';
+
+    var numEl = document.createElement('div'); numEl.className = 'pay-num'; numEl.style.fontSize='12px'; numEl.textContent = su.nums.map(function(n){return '#'+n;}).join(' ');
+    var nameEl = document.createElement('div'); nameEl.className = 'pay-name';
+    nameEl.innerHTML = '<div style="font-weight:700;font-size:14px">' + su.name + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">' + su.classes.join(', ') + '</div>';
+
+    var actions = document.createElement('div'); actions.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-items:flex-end';
+    var badge = document.createElement('span'); badge.className = 'badge ' + payBadge; badge.textContent = payText;
+    var btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:4px';
+    var paidBtn = document.createElement('button');
+    paidBtn.className = 'pay-btn ' + (su.paid && !su.comped ? 'paid-on' : 'paid-off');
+    paidBtn.textContent = 'Paid'; paidBtn.setAttribute('data-pay-idx', idx);
+    var compBtn = document.createElement('button');
+    compBtn.className = 'pay-btn ' + (su.comped ? 'comp-on' : 'comp-off');
+    compBtn.textContent = 'Comp'; compBtn.setAttribute('data-comp-idx', idx);
+    btns.appendChild(paidBtn); btns.appendChild(compBtn);
+    actions.appendChild(badge); actions.appendChild(btns);
+    row.appendChild(numEl); row.appendChild(nameEl); row.appendChild(actions);
+    el.appendChild(row);
+  });
+}
+document.addEventListener('click', function(e) {
+  var pb = e.target.closest('[data-pay-idx]');
+  if (pb) {
+    var idx = parseInt(pb.getAttribute('data-pay-idx'));
+    var u = getUniqueRacers()[idx]; if (!u) return;
+    var newVal = !u.paid;
+    syncByKey(u.key, 'paid', newVal);
+    if (newVal) syncByKey(u.key, 'comped', false);
+    renderPayment(); return;
+  }
+  var cb = e.target.closest('[data-comp-idx]');
+  if (cb) {
+    var idx = parseInt(cb.getAttribute('data-comp-idx'));
+    var u = getUniqueRacers()[idx]; if (!u) return;
+    var newVal = !u.comped;
+    syncByKey(u.key, 'comped', newVal);
+    if (newVal) syncByKey(u.key, 'paid', false);
+    renderPayment(); return;
+  }
+});
+
+// ── DELIVERY TAB ──────────────────────────────────────────────────────────────
+function renderDelivery() {
+  var unique = getUniqueRacers();
+  var done = unique.filter(function(u){ return u.delivered; }).length;
+  document.getElementById('deliveryStats').innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + done + '</div><div class="stat-label">Delivered</div></div>' +
+    '<div class="stat-card"><div class="stat-num">' + (unique.length - done) + '</div><div class="stat-label">Remaining</div></div>' +
+    '<div class="stat-card"><div class="stat-num">' + (unique.length ? Math.round(done/unique.length*100) : 0) + '%</div><div class="stat-label">Complete</div></div>';
+
+  var el = document.getElementById('deliveryList'); el.innerHTML = '';
+  unique.forEach(function(su, idx) {
+    var payBadge = su.comped ? 'badge-comped' : su.paid ? 'badge-paid' : 'badge-unpaid';
+    var payText  = su.comped ? 'Comped' : su.paid ? 'Paid' : 'Unpaid';
+    var row = document.createElement('div'); row.className = 'delivery-row';
+
+    var circle = document.createElement('div');
+    circle.className = 'check-circle' + (su.delivered ? ' done' : '');
+    circle.setAttribute('data-deliver-idx', idx);
+    circle.innerHTML = '<svg class="check-tick" width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="2,7 5.5,10.5 12,3" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    var numEl = document.createElement('div');
+    numEl.style.cssText = 'font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:16px;color:var(--cyan-bright);min-width:40px';
+    numEl.textContent = su.nums.map(function(n){return '#'+n;}).join(' / ');
+
+    var nameEl = document.createElement('div'); nameEl.style.flex = '1';
+    nameEl.innerHTML = '<div style="font-weight:700;font-size:14px">' + su.name + '</div>' +
+      (su.email ? '<div style="font-size:11px;color:var(--muted)">' + su.email + '</div>' : '');
+
+    var badge = document.createElement('span'); badge.className = 'badge ' + payBadge; badge.textContent = payText;
+
+    row.appendChild(circle); row.appendChild(numEl); row.appendChild(nameEl); row.appendChild(badge);
+    el.appendChild(row);
+  });
+
+  document.getElementById('exportBox').textContent = unique.map(function(u){
+    return '#' + u.num + ' ' + u.name + (u.email ? ' - ' + u.email : '') + ' - ' + u.classes.join(', ') + (u.delivered ? ' [DELIVERED]' : '');
+  }).join('\n') || 'No signups yet.';
+}
+document.addEventListener('click', function(e) {
+  var circle = e.target.closest('[data-deliver-idx]');
+  if (!circle) return;
+  var idx = parseInt(circle.getAttribute('data-deliver-idx'));
+  var u = getUniqueRacers()[idx]; if (!u) return;
+  syncByKey(u.key, 'delivered', !u.delivered);
+  renderDelivery();
+});
+function copyExport() {
+  navigator.clipboard.writeText(document.getElementById('exportBox').textContent)
+    .then(function(){ alert('Copied!'); });
+}
+
+function saveEventInfo() {
+  eventInfo.name = document.getElementById('setupEventName').value.trim();
+  eventInfo.location = document.getElementById('setupLocation').value.trim();
+  eventInfo.price = parseFloat(document.getElementById('setupPrice').value) || 75;
+  updateSubtitle(); alert('Saved!');
+}
+
+// ── PIT BOARD IMPORT ──────────────────────────────────────────────────────────
+var importedSchedule = null;
+var pitPhotoBase64 = null;
+
+function handlePhotoUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var dataUrl = e.target.result;
+    pitPhotoBase64 = dataUrl.split(',')[1];
+    document.getElementById('photoThumb').src = dataUrl;
+    document.getElementById('photoPreview').style.display = 'block';
+    document.getElementById('photoDropZone').style.borderColor = 'var(--purple-bright)';
+  };
+  reader.readAsDataURL(file);
+}
+
+function showImportStatus(msg, ok) {
+  var el = document.getElementById('importStatus');
+  el.style.display = 'block';
+  el.style.background = ok ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)';
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  el.style.border = '1px solid ' + (ok ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)');
+  el.textContent = msg;
+}
+
+function parsePhotoSchedule() {
+  if (!pitPhotoBase64) { showImportStatus('No photo selected', false); return; }
+  showImportStatus('Reading pit board...', true);
+  document.getElementById('schedulePreview').style.display = 'none';
+
+  var prompt = 'This is a jetski race pit board or race schedule sheet. Extract the complete race schedule from it. Return ONLY valid JSON in this exact format, no other text:\n{\n  "races": [\n    {\n      "num": 1,\n      "classes": [\n        {\n          "name": "Class Name Here",\n          "racers": [\n            {"num": "24", "name": "S. Lastname"}\n          ]\n        }\n      ]\n    }\n  ]\n}\nFor each race, list all classes in that race. For each class list all racers with their number and abbreviated name (First initial. Lastname). If racer names are not visible, leave racers as empty array. Return only the JSON.';
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: pitPhotoBase64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var text = '';
+    if (data.content && data.content.length > 0) {
+      for (var i = 0; i < data.content.length; i++) {
+        if (data.content[i].type === 'text') text += data.content[i].text;
+      }
+    }
+    // Strip any markdown code fences
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    var parsed = JSON.parse(text);
+    if (!parsed.races || !parsed.races.length) throw new Error('No races found');
+    importedSchedule = parsed.races;
+    showImportStatus('Found ' + parsed.races.length + ' races — review below', true);
+    showSchedulePreview(parsed.races);
+  })
+  .catch(function(err) {
+    showImportStatus('Could not read photo — try the text paste option instead', false);
+    console.error(err);
+  });
+}
+
+function parseTextSchedule() {
+  var text = document.getElementById('scheduleTextInput').value.trim();
+  if (!text) { showImportStatus('Paste some text first', false); return; }
+
+  var races = [];
+  var currentRace = null;
+  var lines = text.split('\n');
+
+  lines.forEach(function(line) {
+    line = line.trim();
+    if (!line) return;
+
+    // Detect race header — "Race 1", "Race 1:", "1:", "1.", "RACE 1"
+    var raceMatch = line.match(/^(?:race\s*)?(\d+)[:\.\-\s]/i);
+    // Also match lines that are just a bold race header like "Race 1"
+    var raceOnly = line.match(/^(?:race\s*)(\d+)$/i);
+
+    if (raceMatch || raceOnly) {
+      var num = parseInt((raceMatch || raceOnly)[1]);
+      // Get class names from remainder of line
+      var remainder = line.replace(/^(?:race\s*)?\d+[:\.\-\s]*/i, '').trim();
+      currentRace = { num: num, classes: [], racers: [] };
+      if (remainder) {
+        // May have multiple classes separated by comma
+        remainder.split(',').forEach(function(cls) {
+          cls = cls.trim();
+          if (cls) currentRace.classes.push({ name: cls, racers: [] });
+        });
+      }
+      races.push(currentRace);
+    } else if (currentRace) {
+      // Could be a class name line or a racer line
+      // Racer lines look like: "1  24  S. Lastname (YAM)" or "24 S. Lastname"
+      var racerMatch = line.match(/^\d+\s+(\d+\w*)\s+([A-Z][a-z]*\.?\s+\S+)/);
+      var racerMatch2 = line.match(/^(\d+\w*)\s+([A-Z][a-z]*\.?\s+\S+)/);
+      if (racerMatch || racerMatch2) {
+        var m = racerMatch || racerMatch2;
+        var rnum = racerMatch ? m[1] : m[1];
+        var rname = racerMatch ? m[2] : m[2];
+        // Clean trailing team info like (YAM)
+        rname = rname.replace(/\s*\([A-Z]+\)\s*$/, '').trim();
+        var racer = { num: rnum, name: rname };
+        // Add to last class or create default
+        if (currentRace.classes.length === 0) {
+          currentRace.classes.push({ name: 'Unknown Class', racers: [] });
+        }
+        currentRace.classes[currentRace.classes.length - 1].racers.push(racer);
+      } else {
+        // Treat as a class name (no leading number = class header)
+        var cleanLine = line.replace(/\s*\(\d+\s*racers?\)/i, '').trim();
+        if (cleanLine && !cleanLine.match(/^\d/)) {
+          currentRace.classes.push({ name: cleanLine, racers: [] });
+        }
+      }
+    }
+  });
+
+  if (!races.length) { showImportStatus('Could not find any races — check the format', false); return; }
+  importedSchedule = races;
+  showImportStatus('Found ' + races.length + ' races — review below', true);
+  showSchedulePreview(races);
+}
+
+function showSchedulePreview(races) {
+  var el = document.getElementById('schedulePreviewList');
+  el.innerHTML = '';
+  races.forEach(function(race) {
+    var classNames = race.classes.map(function(c) { return c.name; }).join(', ');
+    var totalRacers = race.classes.reduce(function(sum, c) { return sum + (c.racers ? c.racers.length : 0); }, 0);
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--border)';
+    div.innerHTML = '<b style="color:var(--purple-bright)">Race ' + race.num + '</b> — ' + classNames +
+      (totalRacers > 0 ? ' <span style="color:var(--muted);font-size:11px">(' + totalRacers + ' racers)</span>' : '');
+    el.appendChild(div);
+  });
+  document.getElementById('schedulePreview').style.display = 'block';
+}
+
+function applyImportedSchedule() {
+  if (!importedSchedule) return;
+  schedule = importedSchedule;
+  TOTAL = schedule.length * MOTOS;
+  currentStep = 0;
+  importedSchedule = null;
+  document.getElementById('schedulePreview').style.display = 'none';
+  document.getElementById('importStatus').style.display = 'none';
+  document.getElementById('scheduleTextInput').value = '';
+  document.getElementById('photoPreview').style.display = 'none';
+  pitPhotoBase64 = null;
+  render();
+  showImportStatus('Schedule applied! ' + schedule.length + ' races loaded.', true);
+  alert('Schedule applied! Switched to Race Tracker tab.');
+  showTab('tracker');
+}
+
+function cancelImport() {
+  importedSchedule = null;
+  document.getElementById('schedulePreview').style.display = 'none';
+  document.getElementById('importStatus').style.display = 'none';
+}
+
+function renderSetup() {
+  document.getElementById('setupEventName').value = eventInfo.name || '';
+  document.getElementById('setupLocation').value = eventInfo.location || '';
+  document.getElementById('setupPrice').value = eventInfo.price || 75;
+}
+
+function updateSubtitle() {
+  document.getElementById('eventSubtitle').textContent = eventInfo.name + (eventInfo.location ? ' - ' + eventInfo.location : '');
+}
+
+updateSubtitle();
+</script>
+</body>
+</html>
